@@ -8,8 +8,15 @@ import (
 )
 
 func UserHandler(w http.ResponseWriter, r *http.Request) {
-	if !isUserAuthenticated(w, r) {
+	var data models.User
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err == nil {
+		fmt.Println(data, r.Header)
+	}
+	token := r.Header.Get("Authorization")
+	if !isUserAuthenticated(token) {
 		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("401 - Unauthorized"))
 		return
 	}
 	if r.Method == "POST" {
@@ -36,15 +43,43 @@ func NewUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
-func isUserAuthenticated(w http.ResponseWriter, r *http.Request) bool {
-	resp, err := http.Get("https://jsonplaceholder.typicode.com/posts/1")
+func isUserAuthenticated(t string) bool {
+	token := t
+	type Response struct {
+		Message string `json:"message"`
+		User    string `json:"user,omitempty"`
+	}
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", "http://127.0.0.1:8000/auth/validate", nil)
 	if err != nil {
 		fmt.Println(err)
 	}
-	var data models.Post
-	arr := json.NewDecoder(resp.Body).Decode(&data)
-	if arr != nil {
-		fmt.Println("data id:", data.Id, "data author:", data.Author.Name, "data text:", data.Text, "data title:", data.Title)
+
+	req.Header.Add("Authorization", "Bearer "+token)
+	if err != nil {
+		fmt.Println(err)
 	}
-	return resp.StatusCode == http.StatusOK
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	defer resp.Body.Close()
+
+	var response Response
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println("Message:", response.Message)
+	if response.User != "" {
+		fmt.Println("User:", response)
+		fmt.Println("User:", response.User)
+	}
+	if response.Message != "Wrong token" {
+		return true
+	}
+	return false
 }
