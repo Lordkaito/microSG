@@ -6,9 +6,10 @@ import (
 	"net/http"
 )
 
+
 func main() {
-	http.HandleFunc("/createUser", controlers.UserHandler)
-	http.HandleFunc("/posts", controlers.PostHandler)
+	http.HandleFunc("/login", controlers.LoginHandler)
+	http.HandleFunc("/signup", controlers.SignupHandler)
 
 	port := ":8080"
 	fmt.Println("Listening on port", port)
